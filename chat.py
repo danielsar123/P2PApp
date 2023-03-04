@@ -36,7 +36,7 @@ def start_server(port):
         print(f"Accepted connection from {address[0]}:{address[1]}")
 
         # add the client socket to the appropriate list
-        all_connections.append({'id': connection_id, 'ip': address[0], 'port no.': address[1]})
+        all_connections.append({'id': connection_id, 'ip': address[0], 'port no.': address[1], 'socket': client_socket})
 
         #increment id for next connection
         connection_id += 1
@@ -71,8 +71,12 @@ def handle_client(client_socket):
         except ConnectionResetError:
             print("Client disconnected")
             break
+        except BrokenPipeError:
+            print("Client socket terminated")
+            break
 
     client_socket.close()
+
 
 def list_connections():
     """
@@ -174,6 +178,8 @@ def help():
             connect()
         elif choice == 5:
             list_connections()
+        elif choice == 6:
+            terminate(all_connections)
 
 
 def get_local_ip():
@@ -190,7 +196,26 @@ def is_valid_ip(ip):
         socket.inet_aton(ip)
         return True
     except socket.error:
-        return False          
+        return False
+    
+def terminate(all_connections):
+    """
+    Function to terminate a connection
+    """
+    id = int(input("Enter the ID of the connection to terminate: "))
+    for connection in all_connections:
+        if connection['id'] == id:
+            try:
+                connection['socket'].shutdown(socket.SHUT_RDWR)
+                connection['socket'].close()
+                all_connections.remove(connection)
+                print(f"Connection with ID {id} terminated.")
+            except OSError:
+                print(f"Error terminating connection with ID {id}")
+            return
+    print(f"No connection with ID {id} found.")
+
+          
 
 def connect():
     while True:
