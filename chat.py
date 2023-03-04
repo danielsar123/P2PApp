@@ -8,6 +8,7 @@ def start_server(port):
     Function to start a server and listen for incoming connections
     """
     # create a TCP socket 
+    
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     #bind to the address of computer running program and specified port number
@@ -15,6 +16,7 @@ def start_server(port):
 
     #allow one connection at a time
     server_socket.listen(1)
+    
 
     while True:
         client_socket, address = server_socket.accept()
@@ -87,12 +89,48 @@ def connect_to_peer(host, port):
 
     client_socket.close()
 
+def myIp():
+    """
+    Function to display the current process's IP address
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # connect to public ip address, port 80 is commonly used for HTTP web traffic
+    s.connect(('8.8.8.8', 80))
+
+    #getsockname() returns tuple containing ip address and port number, getsockname()[0] for ip
+    print("Current IP address:", s.getsockname()[0])
+    s.close()   
+
+def help1():
+    """
+    Function to display available options to the user
+    """
+    print("Options:")
+    print("1) Help")
+    print("2) myIp")
+    print("3) myPort")
+    print("4) connect")
+    print("5) list")
+    print("6) terminate")
+    print("7) send")
+    print("8) exit")
+
+    while True:
+        choice = int(input("Please enter your choice: "))
+        if choice == 1:
+            myIp()
+
+     
+
+
+
 # if program is main program run on command line this block of code will be executed first
 if __name__ == '__main__':
 
     #get the first argument given after argv[0], (name of program itself)
     port = int(sys.argv[1])
-
+    help1()
     #seperate thread for server, and handling clients
     server_thread = threading.Thread(target=start_server, args=(port,))
     server_thread.start()
