@@ -3,32 +3,48 @@ import socket
 import sys
 import threading
 
-
+# initialize empty list to keep track of incoming and outgoing connections
+all_connections = []
+connection_id =1
 def start_server(port):
     """
     Function to start a server and listen for incoming connections
     """
+    #get computer running the program's ip
     local_ip = get_local_ip()
-    # create a TCP socket 
-    
+
+    #set connection_id variable
+    global connection_id
+
+
+    #access the list 
+    global all_connections
+
+     # create a TCP socket 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    #bind to the address of computer running program and specified port number
+    # bind to the address of computer running program and specified port number
     server_socket.bind((local_ip, port))
 
-    #allow one connection at a time
+    # allow one connection at a time
     server_socket.listen(1)
-    
 
     while True:
         client_socket, address = server_socket.accept()
 
-        #use f string to print ip address (address[0]) and port number (address[1])
-        print(f"\nAccepted connection from {address[0]}:{address[1]}")
+        # use f string to print ip address (address[0]) and port number (address[1])
+        print(f"Accepted connection from {address[0]}:{address[1]}")
 
-        # Create a new thread to handle communication with the client
+        # add the client socket to the appropriate list
+        all_connections.append({'id': connection_id, 'ip': address[0], 'port no.': address[1]})
+
+        #increment id for next connection
+        connection_id += 1
+
+        # create a new thread to handle communication with the client
         client_thread = threading.Thread(target=handle_client, args=(client_socket,))
         client_thread.start()
+
 
 # Handles client - to - server communication
 def handle_client(client_socket):
@@ -57,6 +73,19 @@ def handle_client(client_socket):
             break
 
     client_socket.close()
+
+def list_connections():
+    """
+    Function to list all connections in all_connections dictionary
+    """
+    print("All connections:")
+
+    # i is used as an index, connection represents each dictionary, enumerate allows us to iterate through list of dictionaries
+    for i, connection in enumerate(all_connections):
+     print(f"ID: {connection['id']}, IP: {connection['ip']}, Port: {connection['port no.']}")
+
+
+
 
 #handles server - to - client communication 
 def connect_to_peer(host, port):
@@ -90,12 +119,6 @@ def connect_to_peer(host, port):
             break
 
     client_socket.close()
-
-    
-
-
-
-
 
 def myIp():
     """
@@ -149,6 +172,8 @@ def help():
             myPort()
         elif choice == 4:
             connect()
+        elif choice == 5:
+            list_connections()
 
 
 def get_local_ip():
@@ -197,12 +222,6 @@ def connect():
     return client_socket
     
             
-
-    
-    
-
-
-
 
 # if program is main program run on command line this block of code will be executed first
 if __name__ == '__main__':
