@@ -1,3 +1,4 @@
+import ipaddress
 import socket
 import sys
 import threading
@@ -7,12 +8,13 @@ def start_server(port):
     """
     Function to start a server and listen for incoming connections
     """
+    local_ip = get_local_ip()
     # create a TCP socket 
     
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     #bind to the address of computer running program and specified port number
-    server_socket.bind(('localhost', port))
+    server_socket.bind((local_ip, port))
 
     #allow one connection at a time
     server_socket.listen(1)
@@ -22,7 +24,7 @@ def start_server(port):
         client_socket, address = server_socket.accept()
 
         #use f string to print ip address (address[0]) and port number (address[1])
-        print(f"Accepted connection from {address[0]}:{address[1]}")
+        print(f"\nAccepted connection from {address[0]}:{address[1]}")
 
         # Create a new thread to handle communication with the client
         client_thread = threading.Thread(target=handle_client, args=(client_socket,))
@@ -89,6 +91,12 @@ def connect_to_peer(host, port):
 
     client_socket.close()
 
+    
+
+
+
+
+
 def myIp():
     """
     Function to display the current process's IP address
@@ -100,9 +108,24 @@ def myIp():
 
     #getsockname() returns tuple containing ip address and port number, getsockname()[0] for ip
     print("Current IP address:", s.getsockname()[0])
-    s.close()   
+    s.close()  
 
-def help1():
+
+def myPort():
+    
+    """
+    Function to display the current process's port
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # connect to public ip address, port 80 is commonly used for HTTP web traffic
+    s.connect(('8.8.8.8', 80))
+
+    #getsockname() returns tuple containing ip address and port number, getsockname()[1] for port number
+    print("Current port number:", s.getsockname()[1])
+    s.close()
+
+def help():
     """
     Function to display available options to the user
     """
@@ -118,10 +141,66 @@ def help1():
 
     while True:
         choice = int(input("Please enter your choice: "))
-        if choice == 1:
+        if choice ==1:
+            help()
+        elif choice == 2:
             myIp()
+        elif choice == 3:
+            myPort()
+        elif choice == 4:
+            connect()
 
-     
+
+def get_local_ip():
+    """
+    Function to get the local IP address of the machine
+    """
+    return socket.gethostbyname(socket.gethostname())
+
+            
+def is_valid_ip(ip):
+    if ip == 'localhost':
+        return True
+    try:
+        socket.inet_aton(ip)
+        return True
+    except socket.error:
+        return False          
+
+def connect():
+    while True:
+        # get host address
+        host = input("Enter host address: ")
+        if is_valid_ip(host):
+            break  # exit loop if IP is valid
+        else:
+            print("Invalid IP address, please input a valid IP address!")
+
+    while True:
+        try:
+            port = int(input("Enter port number: "))
+            break  # Exit the loop if input is valid
+        except ValueError:
+            print("Invalid port number, please enter a valid integer.")
+
+    # create the client socket and connect to the server
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((host,port))
+        client_socket.setblocking(False)
+        print(f"Connected to {host}:{port}")
+    except ConnectionRefusedError:
+        print("Connection refused. Please check the host and port number.")
+    except OSError as e:
+        print(f"Error connecting to {host}:{port}: {e}")
+    # return the client socket object to the main program loop
+    return client_socket
+    
+            
+
+    
+    
+
 
 
 
@@ -130,11 +209,18 @@ if __name__ == '__main__':
 
     #get the first argument given after argv[0], (name of program itself)
     port = int(sys.argv[1])
-    help1()
+    
     #seperate thread for server, and handling clients
     server_thread = threading.Thread(target=start_server, args=(port,))
     server_thread.start()
 
+    #check if thread is alive, then call for options
+    if server_thread.is_alive():
+        print("Server started... ")
+        help()
+
+        
+    
     while True:
         host = input("Enter host IP address: ")
         if host.lower() == 'exit':
