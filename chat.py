@@ -16,7 +16,6 @@ def start_server(port):
     #set connection_id variable
     global connection_id
 
-
     #access the list 
     global all_connections
 
@@ -33,7 +32,7 @@ def start_server(port):
         client_socket, address = server_socket.accept()
 
         # use f string to print ip address (address[0]) and port number (address[1])
-        print(f"Accepted connection from {address[0]}:{address[1]}")
+        print(f"\nAccepted connection from {address[0]}:{address[1]}")
 
         # add the client socket to the appropriate list
         all_connections.append({'id': connection_id, 'ip': address[0], 'port no.': address[1], 'socket': client_socket})
@@ -42,40 +41,67 @@ def start_server(port):
         connection_id += 1
 
         # create a new thread to handle communication with the client
-        client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+        client_thread = threading.Thread(target=handle_client, args=(client_socket, address,all_connections,server_socket))
         client_thread.start()
 
+def remove_connection(connections, address):
+    """
+    Function to remove a connection from the list of connections
+    """
+    for connection in connections:
+        if connection['ip'] == address[0] and connection['port no.'] == address[1]:
+            connections.remove(connection)
+            break
+    else:
+        print(f"Client {address[0]}:{address[1]} not found in connections list.")
 
-# Handles client - to - server communication
-def handle_client(client_socket):
+
+
+
+# Handles server-to-client communication
+def handle_client(client_socket, address, connections, server_socket):
     """
     Function to handle communication with a client
     """
-    #calls to .recv won't block program
+    # calls to .recv won't block program
     client_socket.setblocking(False)
 
     while True:
         try:
             # get the message client inputs into command line from Line 73
             message = client_socket.recv(1024).decode()
-            if message:
-            # the host server client sent message to will print the message to console 
-                print(f"Received message: {message}")
-            
-            # this sends client's message to line 79 to be printed on client's console
-                client_socket.sendall(f"Echo: {message}".encode())
-
-            #error handling
+            if not message:
+                
+                print(f"Connection from {address[0]}:{address[1]} terminated.")
+                msg = (f"Connection from {address[0]}:{address[1]} terminated.")
+                client_socket.sendall(msg.encode())
+                client_socket.close()
+                remove_connection(connections,address)
+                break
+                # the host server client sent message to will print the message to console 
+            else:
+                print(f"\nReceived message from {address[0]}:{address[1]} Message: {message}")
+                
+        # error handling
         except BlockingIOError:
             continue
         except ConnectionResetError:
-            print("Client disconnected")
+            print(f"Client {address[0]}:{address[1]} disconnected.")
+            remove_connection(connections, address)
             break
         except BrokenPipeError:
-            print("Client socket terminated")
+            print(f"Client socket {address[0]}:{address[1]} terminated.")
+            remove_connection(connections, address)
             break
+        except socket.error:
+            print(f"Socket error with client {address[0]}:{address[1]}.")
+            remove_connection(connections, address)
+            break
+        except ValueError:
+            print(f"Empty message received from client {address[0]}:{address[1]}.")
+            remove_connection(connections, address)
 
-    client_socket.close()
+
 
 
 def list_connections():
@@ -88,41 +114,26 @@ def list_connections():
     for i, connection in enumerate(all_connections):
      print(f"ID: {connection['id']}, IP: {connection['ip']}, Port: {connection['port no.']}")
 
-
-
-
-#handles server - to - client communication 
-def connect_to_peer(host, port):
+def send():
     """
-    Function to connect to a peer and send/receive messages
+    Function to send a message to a connection ID
     """
+    connection_id = int(input("Enter the connection ID to send message to: "))
+    message = input("Enter message to send: ")
 
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-    client_socket.setblocking(False)
-    print(f"Connected to {host}:{port}")
+    # find the connection with the given ID
+    for connection in all_connections:
+        if connection['id'] == connection_id:
+            try:
+                # send the message to the connection
+                connection['socket'].sendall(message.encode())
+                print(f"\nMessage sent to connection {connection_id}")
+            except OSError:
+                print(f"\nError sending message to connection {connection_id}")
+            return
 
-    while True:
-        try:
-            message = input("Enter message (or type 'exit' to quit): ")
-            if message.lower() == 'exit':
-                break  # Exit the loop if user enters 'exit'
-            client_socket.sendall(message.encode())
-        except BlockingIOError:
-            continue
-
-        try:
-            # decodes data sent from Line 46
-            response = client_socket.recv(1024).decode()
-            if response:
-                print(f"Received response: {response}")
-        except BlockingIOError:
-            continue
-        except ConnectionResetError:
-            print("Server disconnected")
-            break
-
-    client_socket.close()
+    # if no connection with the given ID is found
+    print(f"\nNo connection found with ID {connection_id}")
 
 def myIp():
     """
@@ -138,21 +149,14 @@ def myIp():
     s.close()  
 
 
-def myPort():
-    
+def myPort(port):
     """
     Function to display the current process's port
     """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    print("Current port number:", port)
 
-    # connect to public ip address, port 80 is commonly used for HTTP web traffic
-    s.connect(('8.8.8.8', 80))
 
-    #getsockname() returns tuple containing ip address and port number, getsockname()[1] for port number
-    print("Current port number:", s.getsockname()[1])
-    s.close()
-
-def help():
+def help(port):
     """
     Function to display available options to the user
     """
@@ -168,18 +172,47 @@ def help():
 
     while True:
         choice = int(input("Please enter your choice: "))
-        if choice ==1:
+        try:
+         if choice ==1:
             help()
-        elif choice == 2:
+         elif choice == 2:
             myIp()
-        elif choice == 3:
-            myPort()
-        elif choice == 4:
+         elif choice == 3:
+            myPort(port)
+         elif choice == 4:
             connect()
-        elif choice == 5:
+         elif choice == 5:
             list_connections()
-        elif choice == 6:
+         elif choice == 6:
             terminate(all_connections)
+         elif choice == 7:
+            send()
+         elif choice == 8:
+            exit()
+         else:
+                print("\nInvalid choice. Please enter a valid option number.")
+        except ValueError:
+            print("\nInvalid input. Please enter a valid integer.")
+def exit():
+    """
+    Function to close all connections and terminate the program
+    """
+    global all_connections
+    
+    # Close all connections
+    for connection in all_connections:
+        try:
+            connection['socket'].shutdown(socket.SHUT_RDWR)
+            connection['socket'].close()
+        except OSError:
+            pass
+    
+    # Remove all connections from the list
+    all_connections = []
+
+    # Terminate the program
+    print("Exiting program...")
+    sys.exit(0)
 
 
 def get_local_ip():
@@ -204,10 +237,17 @@ def terminate(all_connections):
     """
     id = int(input("Enter the ID of the connection to terminate: "))
     for connection in all_connections:
+        #find connection in list using id
         if connection['id'] == id:
             try:
+
+                #shut down socket 
                 connection['socket'].shutdown(socket.SHUT_RDWR)
+                
+                #close socket
                 connection['socket'].close()
+
+                #remove from list
                 all_connections.remove(connection)
                 print(f"Connection with ID {id} terminated.")
             except OSError:
@@ -218,6 +258,7 @@ def terminate(all_connections):
           
 
 def connect():
+    global connection_id
     while True:
         # get host address
         host = input("Enter host address: ")
@@ -239,12 +280,18 @@ def connect():
         client_socket.connect((host,port))
         client_socket.setblocking(False)
         print(f"Connected to {host}:{port}")
+        # add the client socket to the all_connections list
+        all_connections.append({'id': connection_id, 'ip': host, 'port no.': port, 'socket': client_socket})
+        # increment id for next connection
+        
+        connection_id += 1
     except ConnectionRefusedError:
         print("Connection refused. Please check the host and port number.")
     except OSError as e:
         print(f"Error connecting to {host}:{port}: {e}")
     # return the client socket object to the main program loop
     return client_socket
+
     
             
 
@@ -261,16 +308,8 @@ if __name__ == '__main__':
     #check if thread is alive, then call for options
     if server_thread.is_alive():
         print("Server started... ")
-        help()
+        help(port)
 
         
     
-    while True:
-        host = input("Enter host IP address: ")
-        if host.lower() == 'exit':
-            break
-        try:
-            port = int(input("Enter port number: "))
-            connect_to_peer(host, port)
-        except ValueError:
-            print("Invalid port number. Please enter a valid integer.")
+    
