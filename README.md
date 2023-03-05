@@ -10,9 +10,4 @@ This project is for Comp 429 and creates a P2P Python application which allows f
 ## How to Use
 Find the directory of the project, and run this line in command prompt: python chat.py <enter port number (e.g. 123)>
 
-## Authors
-
-Daniel Sarkisian - Set up server and client threads and handled methods involving connection, sending messages, and error handling.
-
-David Nazaretyan - Set up methods involving terminating connections, exiting system, and also aided in error handling and other bugs. 
 
