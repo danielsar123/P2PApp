@@ -174,7 +174,7 @@ def help(port):
         choice = int(input("Please enter your choice: "))
         try:
          if choice ==1:
-            help()
+            help(port)
          elif choice == 2:
             myIp()
          elif choice == 3:
